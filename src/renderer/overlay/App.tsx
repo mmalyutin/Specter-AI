@@ -391,13 +391,14 @@ export default function App() {
    */
   const doSubmit = useCallback((withScreen = false) => {
     const q = queryRef.current.trim()
-    if (!q && !withScreen && !isRecordingRef.current) return
+    const useScreen = withScreen || includeScreenRef.current
+    if (!q && !useScreen && !isRecordingRef.current) return
     if (isStreamingRef.current) return
 
     const userMessage: Message = {
       id: `user-${Date.now()}`,
       role: 'user',
-      content: q || '(Analyze my screen)',
+      content: q || (useScreen ? 'Analyze what is on my screen and help me with it.' : '(Analyze my screen)'),
       timestamp: Date.now()
     }
 
@@ -412,8 +413,8 @@ export default function App() {
 
     // Send with conversation history for context
     window.specterAPI?.queryAI(
-      q,
-      withScreen || includeScreenRef.current,
+      userMessage.content,
+      useScreen,
       isRecordingRef.current,
       history
     )
@@ -703,6 +704,10 @@ export default function App() {
       autoCaptureTextRef.current = data.text
     })
 
+    const unsubCaptureError = api.onScreenCaptureError?.((errMsg) => {
+      setError(`Screenshot failed: ${errMsg}`)
+    })
+
     return () => {
       unsubChunk()
       unsubDone()
@@ -711,6 +716,7 @@ export default function App() {
       unsubHotkeyScreenshot()
       unsubHotkeyAudio()
       unsubAutoCapture()
+      unsubCaptureError?.()
     }
   }, [doSubmit, toggleRecording])
 

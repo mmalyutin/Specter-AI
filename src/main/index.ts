@@ -24,6 +24,11 @@ if (!gotLock) {
   app.quit()
 }
 
+// Help Windows desktop capture APIs enumerate screens reliably
+if (process.platform === 'win32') {
+  app.commandLine.appendSwitch('enable-usermedia-screen-capturing')
+}
+
 app.whenReady().then(() => {
   // Set app user model id for Windows
   electronApp.setAppUserModelId('com.specter.ai')

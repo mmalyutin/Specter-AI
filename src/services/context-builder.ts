@@ -13,6 +13,10 @@ export function buildUserMessage(ctx: ContextSnapshot): string {
     parts.push(`[SCREEN CONTENT]\n${ctx.screenText.slice(0, 3000)}`)
   }
 
+  if (ctx.screenshot) {
+    parts.push('[SCREEN IMAGE]\nA screenshot of the current screen is attached. Treat it as the primary view of what the user is looking at.')
+  }
+
   if (ctx.transcript) {
     parts.push(`[RECENT CONVERSATION TRANSCRIPT]\n${ctx.transcript.slice(0, 2000)}`)
   }

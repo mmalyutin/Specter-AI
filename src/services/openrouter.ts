@@ -1,7 +1,10 @@
 // OpenRouter API client — OpenAI-compatible with streaming support
 import OpenAI from 'openai'
+import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions'
 import { OPENROUTER_BASE_URL, OPENROUTER_REFERER, OPENROUTER_TITLE } from '../shared/constants'
 import type { OpenRouterModel } from '../shared/types'
+
+export type ChatMessage = ChatCompletionMessageParam
 
 let client: OpenAI | null = null
 let currentAbortController: AbortController | null = null
@@ -29,7 +32,7 @@ export interface StreamCallbacks {
 }
 
 export async function streamCompletion(
-  messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>,
+  messages: ChatMessage[],
   model: string,
   apiKey: string,
   callbacks: StreamCallbacks,

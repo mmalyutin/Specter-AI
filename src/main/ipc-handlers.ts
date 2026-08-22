@@ -2,7 +2,7 @@
 import { ipcMain, BrowserWindow, app, shell } from 'electron'
 import { IPC_CHANNELS } from '../shared/ipc-channels'
 import { getSetting, setSetting, getAllSettings, getConversations, saveConversation, deleteConversation, clearConversations, isValidSetting } from '../services/store'
-import { streamCompletion, cancelStream, fetchAvailableModels, estimateCost, getCachedModels } from '../services/openrouter'
+import { streamCompletion, cancelStream, fetchAvailableModels, estimateCost, getCachedModels, type ChatMessage } from '../services/openrouter'
 import { streamOpenAICompletion, cancelOpenAIStream } from '../services/openai-api'
 import { streamCodexCompletion, cancelCodexStream } from '../services/codex'
 import { buildSystemPrompt, buildUserMessage, estimateTokens } from '../services/context-builder'
@@ -146,6 +146,33 @@ function isValidSettingsKey(key: unknown): key is string {
   return typeof key === 'string' && key.length <= 100
 }
 
+function modelSupportsVision(model: string): boolean {
+  const id = model.toLowerCase()
+  if (id.includes('deepseek') && !id.includes('vl')) return false
+  if (id.includes('llama-3') || id.includes('llama3')) return false
+  const visionHints = [
+    'gemini', 'claude', 'gpt-4o', 'gpt-4.1', 'gpt-5', 'gpt-4-turbo',
+    'llama-4', 'llama4', 'qwen-vl', 'qwen2.5-vl', 'pixtral', 'vision',
+    'sonnet', 'opus', 'haiku', 'maverick', 'flash', 'grok'
+  ]
+  return visionHints.some((hint) => id.includes(hint))
+}
+
+function textFromChatMessage(content: ChatMessage['content']): string {
+  if (typeof content === 'string') return content
+  if (!Array.isArray(content)) return ''
+  return content
+    .map((part) => {
+      if (typeof part === 'string') return part
+      if (part && typeof part === 'object' && 'text' in part && typeof part.text === 'string') {
+        return part.text
+      }
+      return ''
+    })
+    .filter(Boolean)
+    .join('\n')
+}
+
 export function registerIpcHandlers(overlayWindow: BrowserWindow): void {
   // Store overlay reference for auto-capture
   autoCaptureOverlay = overlayWindow
@@ -188,16 +215,27 @@ export function registerIpcHandlers(overlayWindow: BrowserWindow): void {
     const systemPrompt = getSetting<string>('systemPrompt')
 
     let screenText = ''
+    let screenshot: string | undefined
     let transcript = ''
 
-    // Capture screen if requested
+    // Capture screen if requested — surface failures so the overlay can show them
     if (args.includeScreen) {
       try {
         const smartCrop = getSetting<boolean>('smartCrop') || false
         const capture = await captureScreenText(smartCrop)
         screenText = capture.text
+        screenshot = capture.screenshot
+        if (!screenText && !screenshot) {
+          if (!event.sender.isDestroyed()) {
+            event.sender.send(IPC_CHANNELS.SCREEN_CAPTURE_ERROR, 'Screen capture returned no content.')
+          }
+        }
       } catch (err: unknown) {
-        console.warn('[Specter] Screen capture failed:', err)
+        const message = err instanceof Error ? err.message : 'Screen capture failed'
+        console.warn('[Specter] Screen capture failed:', message)
+        if (!event.sender.isDestroyed()) {
+          event.sender.send(IPC_CHANNELS.SCREEN_CAPTURE_ERROR, message)
+        }
       }
     }
 
@@ -219,7 +257,8 @@ export function registerIpcHandlers(overlayWindow: BrowserWindow): void {
     const userMessage = buildUserMessage({
       screenText,
       transcript,
-      userQuery: args.query
+      userQuery: args.query,
+      screenshot
     })
 
     const fullUserMessage = playbookContext
@@ -227,7 +266,7 @@ export function registerIpcHandlers(overlayWindow: BrowserWindow): void {
       : userMessage
 
     // Build messages array: system prompt + conversation history + new user message
-    const messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }> = [
+    const messages: ChatMessage[] = [
       { role: 'system', content: buildSystemPrompt(systemPrompt) }
     ]
 
@@ -241,11 +280,22 @@ export function registerIpcHandlers(overlayWindow: BrowserWindow): void {
       }
     }
 
-    // Add the new user message with full context
-    messages.push({ role: 'user', content: fullUserMessage })
+    // Send the screenshot as a vision image when the model can use it.
+    // OCR text is still included as extra context for text-only models.
+    if (screenshot && aiProvider === 'openrouter' && modelSupportsVision(model)) {
+      messages.push({
+        role: 'user',
+        content: [
+          { type: 'text', text: fullUserMessage },
+          { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${screenshot}` } }
+        ]
+      })
+    } else {
+      messages.push({ role: 'user', content: fullUserMessage })
+    }
 
     // Estimate prompt tokens for cost tracking
-    const promptTokens = estimateTokens(messages.map(m => m.content).join(' '))
+    const promptTokens = estimateTokens(messages.map((m) => textFromChatMessage(m.content)).join(' '))
     let completionContent = ''
 
     const streamCallbacks = {
@@ -286,10 +336,15 @@ export function registerIpcHandlers(overlayWindow: BrowserWindow): void {
       }
     }
 
+    const textOnlyMessages = messages.map((msg) => ({
+      role: msg.role as 'user' | 'assistant' | 'system',
+      content: textFromChatMessage(msg.content)
+    }))
+
     if (aiProvider === 'codex') {
-      await streamCodexCompletion(messages, model, streamCallbacks)
+      await streamCodexCompletion(textOnlyMessages, model, streamCallbacks)
     } else if (aiProvider === 'openai') {
-      await streamOpenAICompletion(messages, model, openaiApiKey, streamCallbacks)
+      await streamOpenAICompletion(textOnlyMessages, model, openaiApiKey, streamCallbacks)
     } else {
       await streamCompletion(messages, model, openrouterApiKey, streamCallbacks)
     }
