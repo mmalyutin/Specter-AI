@@ -3,27 +3,24 @@ import { globalShortcut, BrowserWindow } from 'electron'
 import { IPC_CHANNELS } from '../shared/ipc-channels'
 import { getSetting } from '../services/store'
 import { DEFAULT_HOTKEYS } from '../shared/constants'
-import { showOverlay, toggleOverlay } from './overlay-window'
-
-let overlayRef: BrowserWindow | null = null
+import { showOverlay, toggleOverlay, getOverlayWindow } from './overlay-window'
 
 export function registerHotkeys(overlayWindow: BrowserWindow): void {
-  overlayRef = overlayWindow
+  // Kept for API stability with callers — handlers below resolve the live
+  // overlay window dynamically so they survive the window being recreated.
   applyHotkeys()
 }
 
 function applyHotkeys(): void {
-  if (!overlayRef || overlayRef.isDestroyed()) return
-
   // Unregister all first to avoid conflicts
   globalShortcut.unregisterAll()
 
   const hotkeys = getSetting<typeof DEFAULT_HOTKEYS>('hotkeys') || DEFAULT_HOTKEYS
-  const win = overlayRef
 
   // Ctrl/Cmd + Enter: Ask AI based on current context
   try {
     globalShortcut.register(hotkeys.askAI, () => {
+      const win = getOverlayWindow()
       if (win && !win.isDestroyed()) {
         showOverlay()
         win.webContents.send(IPC_CHANNELS.HOTKEY_ASK_AI)
@@ -36,6 +33,7 @@ function applyHotkeys(): void {
   // Ctrl/Cmd + Shift + Enter: Ask AI with screenshot
   try {
     globalShortcut.register(hotkeys.screenshotAsk, () => {
+      const win = getOverlayWindow()
       if (win && !win.isDestroyed()) {
         showOverlay()
         win.webContents.send(IPC_CHANNELS.HOTKEY_ASK_WITH_SCREENSHOT)
@@ -48,9 +46,7 @@ function applyHotkeys(): void {
   // Ctrl/Cmd + \: Toggle overlay visibility
   try {
     globalShortcut.register(hotkeys.toggleOverlay, () => {
-      if (win && !win.isDestroyed()) {
-        toggleOverlay()
-      }
+      toggleOverlay()
     })
   } catch (e) {
     console.warn('[Specter] Failed to register toggleOverlay hotkey:', e)
@@ -59,6 +55,7 @@ function applyHotkeys(): void {
   // Ctrl/Cmd + Shift + Space: Toggle audio recording
   try {
     globalShortcut.register(hotkeys.toggleAudio, () => {
+      const win = getOverlayWindow()
       if (win && !win.isDestroyed()) {
         win.webContents.send(IPC_CHANNELS.HOTKEY_TOGGLE_AUDIO)
       }

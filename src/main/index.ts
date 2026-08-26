@@ -5,7 +5,7 @@ import { createOverlayWindow, getOverlayWindow, showOverlay } from './overlay-wi
 import { createTray, destroyTray } from './tray'
 import { registerHotkeys, unregisterAllHotkeys } from './hotkey-manager'
 import { registerIpcHandlers } from './ipc-handlers'
-import { createOnboardingWindow } from './onboarding-window'
+import { createOnboardingWindow, getOnboardingWindow } from './onboarding-window'
 import { initUpdater } from './updater'
 import { getSetting } from '../services/store'
 
@@ -108,8 +108,14 @@ app.whenReady().then(() => {
   })
 })
 
-// Handle second instance — show overlay
+// Handle second instance — focus the setup wizard if it's open (a fresh
+// install shouldn't get the overlay popped above it mid-setup), else show overlay
 app.on('second-instance', () => {
+  const wizard = getOnboardingWindow()
+  if (wizard && !wizard.isDestroyed()) {
+    wizard.focus()
+    return
+  }
   const overlay = getOverlayWindow()
   if (overlay) {
     showOverlay({ focus: true })
