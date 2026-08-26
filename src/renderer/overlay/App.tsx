@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import ResponseCard from './ResponseCard'
 import TranscriptBar from './TranscriptBar'
 import MeetingRecorder from './MeetingRecorder'
+import UpdateToast from './UpdateToast'
 import { Send, Mic, MicOff, Monitor, Settings, GripVertical, Minimize2, Maximize2, X, ScanSearch, Paperclip, Trash2, Clock, ChevronLeft, MessageSquare, Power } from 'lucide-react'
 import type { StreamDoneData } from '../../preload/index'
 import type { Message, Conversation } from '../../shared/types'
@@ -764,6 +765,8 @@ export default function App() {
         borderStyle: 'solid'
       } as React.CSSProperties}
     >
+      <UpdateToast />
+
       {/* Title bar — draggable */}
       <div
         className="flex items-center justify-between px-4 py-2 cursor-move select-none"
