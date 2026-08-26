@@ -70,7 +70,7 @@
       "signAndEditExecutable": false
     },
     "portable": {
-      "artifactName": "${productName}-${version}-portable.${ext}"
+      "artifactName": "specter-portable.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -81,7 +81,7 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Specter AI",
-      "artifactName": "${productName}-Setup-${version}.${ext}"
+      "artifactName": "specter-setup.${ext}"
     },
     "mac": {
       "target": [
@@ -102,7 +102,7 @@
       ],
       "icon": "build-resources/icon.png",
       "category": "public.app-category.productivity",
-      "artifactName": "${productName}-${version}-mac-${arch}.${ext}",
+      "artifactName": "specter-mac-${arch}.${ext}",
       "hardenedRuntime": true,
       "entitlements": "build-resources/entitlements.mac.plist",
       "entitlementsInherit": "build-resources/entitlements.mac.plist",
@@ -112,7 +112,7 @@
       }
     },
     "dmg": {
-      "artifactName": "${productName}-${version}-mac-${arch}.${ext}",
+      "artifactName": "specter-mac-${arch}.${ext}",
       "title": "${productName} ${version}"
     },
     "linux": {
@@ -132,7 +132,7 @@
       ],
       "icon": "build-resources/icons",
       "category": "Utility",
-      "artifactName": "${productName}-${version}-linux-${arch}.${ext}",
+      "artifactName": "specter-linux-${arch}.${ext}",
       "desktop": {
         "Name": "Specter AI",
         "Comment": "AI Screen & Meeting Copilot",

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Specter AI — The AI copilot no one else can see</title>
+  <meta name="description" content="Open-source, privacy-first AI screen & meeting copilot. Invisible overlay powered by OpenRouter. Bring your own API key." />
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div class="hero">
+    <div class="container">
+      <h1>The AI copilot<br /><span>no one else can see</span></h1>
+      <p class="tagline">
+        Specter AI reads your screen and meeting audio, then answers in an overlay
+        invisible to screen sharing. Free, open source, privacy-first.
+      </p>
+      <a id="download-primary" class="btn-primary" href="https://github.com/umairinayat/Specter-AI/releases/latest/download/specter-setup.exe">
+        <span id="download-label">Download for Windows</span>
+      </a>
+      <p class="alt-downloads">
+        Also available:
+        <a href="https://github.com/umairinayat/Specter-AI/releases/latest/download/specter-portable.exe">Windows portable</a> ·
+        <a href="https://github.com/umairinayat/Specter-AI/releases/latest/download/specter-mac-arm64.zip">macOS Apple Silicon</a> ·
+        <a href="https://github.com/umairinayat/Specter-AI/releases/latest/download/specter-mac-x64.zip">macOS Intel</a> ·
+        <a href="https://github.com/umairinayat/Specter-AI/releases/latest/download/specter-linux-x64.AppImage">Linux AppImage</a> ·
+        <a href="https://github.com/umairinayat/Specter-AI/releases">All releases</a>
+      </p>
+    </div>
+  </div>
+
+  <section>
+    <div class="container">
+      <h2>How it works</h2>
+      <p class="sub">From download to first answer in about two minutes.</p>
+      <div class="steps">
+        <div class="step">
+          <div class="num">Step 1</div>
+          <h3>Install &amp; connect</h3>
+          <p>A 2-minute setup wizard connects your OpenRouter, OpenAI, or Codex plan key. It's stored encrypted on your machine.</p>
+        </div>
+        <div class="step">
+          <div class="num">Step 2</div>
+          <h3>Press a hotkey</h3>
+          <p>Ctrl+Enter captures your screen, transcribes meeting audio, and sends both as context with your question.</p>
+        </div>
+        <div class="step">
+          <div class="num">Step 3</div>
+          <h3>Get answers only you see</h3>
+          <p>Responses stream into a translucent overlay that Zoom, Meet, and Teams screen sharing cannot capture.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <h2>Features</h2>
+      <p class="sub">Everything runs locally except the AI API call you trigger.</p>
+      <div class="features">
+        <div class="feature"><h3>Invisible overlay</h3><p>Always-on-top, transparent, excluded from screen capture on Windows and macOS.</p></div>
+        <div class="feature"><h3>Screen reading</h3><p>On-demand OCR of your screen — text and optional vision screenshots for capable models.</p></div>
+        <div class="feature"><h3>Live transcription</h3><p>Rolling meeting transcript via Whisper (Groq free tier, OpenAI, or custom endpoint).</p></div>
+        <div class="feature"><h3>Any model</h3><p>500+ models on OpenRouter, or use your existing OpenAI / ChatGPT Codex plan.</p></div>
+        <div class="feature"><h3>Playbooks</h3><p>Inject meeting prep, job descriptions, and notes into every prompt automatically.</p></div>
+        <div class="feature"><h3>Auto-updates</h3><p>The app updates itself silently in the background. No re-downloads.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <h2>Hotkeys</h2>
+      <p class="sub">All customizable in Settings.</p>
+      <div class="hotkeys">
+        <div class="hotkey"><span>Ask AI with screen context</span><code>Ctrl+Enter</code></div>
+        <div class="hotkey"><span>Ask AI with screenshot</span><code>Ctrl+Shift+Enter</code></div>
+        <div class="hotkey"><span>Show / hide overlay</span><code>Ctrl+\</code></div>
+        <div class="hotkey"><span>Toggle audio transcription</span><code>Ctrl+Shift+Space</code></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <h2>Installation</h2>
+      <p class="sub">Per-platform notes and trust prompts.</p>
+      <div class="tabs">
+        <button class="tab active" data-tab="win">Windows</button>
+        <button class="tab" data-tab="mac">macOS</button>
+        <button class="tab" data-tab="linux">Linux</button>
+      </div>
+
+      <div id="tab-win" class="tab-panel active">
+        <ol>
+          <li>Download <strong>specter-setup.exe</strong> and run it.</li>
+          <li>If Windows SmartScreen shows "Windows protected your PC", click <strong>More info</strong>, then <strong>Run anyway</strong>. This prompt appears while builds are unsigned and goes away once signed releases ship.</li>
+          <li>Follow the setup wizard — that's it.</li>
+        </ol>
+      </div>
+
+      <div id="tab-mac" class="tab-panel">
+        <ol>
+          <li>Download <strong>specter-mac-arm64.zip</strong> (Apple Silicon) or <strong>specter-mac-x64.zip</strong> (Intel) and unzip it.</li>
+          <li>Drag <strong>Specter AI</strong> to Applications.</li>
+          <li>First launch: right-click the app → <strong>Open</strong> (bypasses Gatekeeper for unsigned builds).</li>
+          <li>Grant Screen Recording and Microphone permissions when prompted (System Settings → Privacy &amp; Security).</li>
+        </ol>
+      </div>
+
+      <div id="tab-linux" class="tab-panel">
+        <ol>
+          <li>Download <strong>specter-linux-x64.AppImage</strong>, make it executable (<code>chmod +x</code>), and run it.</li>
+          <li>Or install <strong>specter-linux-x64.deb</strong> with your package manager.</li>
+          <li>X11 works best; screen-capture exclusion is limited on Wayland.</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <h2>FAQ</h2>
+      <div class="faq-item">
+        <h3>Is using Specter AI during meetings or exams allowed?</h3>
+        <p>That depends on the rules of your meeting, employer, school, or exam provider — many prohibit assistance tools. Specter AI is intended for legitimate use: accessibility, note-taking, translation, and remembering your own prep. You are responsible for following the rules that apply to you.</p>
+      </div>
+      <div class="faq-item">
+        <h3>Where does my data go?</h3>
+        <p>Everything stays on your machine except the AI API call you trigger, which sends extracted text (and optional screenshots) to your chosen provider with your own key. No telemetry, no analytics, no servers of ours.</p>
+      </div>
+      <div class="faq-item">
+        <h3>Is it really free?</h3>
+        <p>The app is free and open source (MIT). You bring your own AI access: OpenRouter has free models, Groq transcription has a free tier, and Codex-plan users need no API key at all.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <p><a href="https://github.com/umairinayat/Specter-AI">GitHub</a> · MIT License · Built with Electron, React, and TypeScript</p>
+    </div>
+  </footer>
+
+  <script type="module" src="./script.js"></script>
+  <script>
+    document.querySelectorAll('.tab').forEach(function (tab) {
+      tab.addEventListener('click', function () {
+        document.querySelectorAll('.tab').forEach(function (t) { t.classList.remove('active') })
+        document.querySelectorAll('.tab-panel').forEach(function (p) { p.classList.remove('active') })
+        tab.classList.add('active')
+        var panel = document.getElementById('tab-' + tab.dataset.tab)
+        if (panel) panel.classList.add('active')
+      })
+    })
+  </script>
+</body>
+</html>
