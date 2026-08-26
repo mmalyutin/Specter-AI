@@ -36,6 +36,7 @@ function KeyConnect({ provider, onProviderChange, onNext, onBack }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [groqKey, setGroqKey] = useState('')
   const [groqSaved, setGroqSaved] = useState(false)
+  const [groqError, setGroqError] = useState<string | null>(null)
 
   const isRouter = provider === 'openrouter'
 
@@ -82,9 +83,14 @@ function KeyConnect({ provider, onProviderChange, onNext, onBack }: Props) {
 
   async function saveGroq() {
     if (!groqKey.trim()) return
-    await window.specterAPI?.setSetting('whisperProvider', 'groq')
-    await window.specterAPI?.setSetting('whisperApiKey', groqKey.trim())
-    setGroqSaved(true)
+    setGroqError(null)
+    try {
+      await window.specterAPI?.setSetting('whisperProvider', 'groq')
+      await window.specterAPI?.setSetting('whisperApiKey', groqKey.trim())
+      setGroqSaved(true)
+    } catch (e: unknown) {
+      setGroqError(e instanceof Error ? e.message : 'Failed to save key')
+    }
   }
 
   return (
@@ -174,6 +180,7 @@ function KeyConnect({ provider, onProviderChange, onNext, onBack }: Props) {
               </button>
             </div>
           )}
+          {!groqSaved && groqError && <p className="text-xs text-red-400 mt-2">{groqError}</p>}
         </div>
       )}
 

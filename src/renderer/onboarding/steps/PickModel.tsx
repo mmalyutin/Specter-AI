@@ -40,14 +40,20 @@ const MODEL_SETTING: Record<ProviderId, string> = {
 export default function PickModel({ provider, onNext, onBack }: Props) {
   const choices = CURATED[provider]
   const [selected, setSelected] = useState<string>(choices[0].id)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     setSelected(CURATED[provider][0].id)
   }, [provider])
 
   async function pickAndContinue() {
-    await window.specterAPI?.setSetting(MODEL_SETTING[provider], selected)
-    onNext()
+    setError(null)
+    try {
+      await window.specterAPI?.setSetting(MODEL_SETTING[provider], selected)
+      onNext()
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to save model')
+    }
   }
 
   return (
@@ -92,6 +98,8 @@ export default function PickModel({ provider, onNext, onBack }: Props) {
           )
         })}
       </div>
+
+      {error && <p className="text-xs text-red-400 mt-2">{error}</p>}
 
       <div className="flex gap-2 mt-6">
         <button

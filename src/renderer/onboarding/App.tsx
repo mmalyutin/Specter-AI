@@ -35,7 +35,7 @@ export default function App() {
           </div>
           <span className="text-sm font-semibold text-white/80">Specter AI Setup</span>
         </div>
-        {step < STEP_COUNT - 1 && (
+        {step > 0 && step < STEP_COUNT - 1 && (
           <button
             onClick={() => window.specterAPI?.completeOnboarding(true)}
             className="text-xs text-white/40 hover:text-white/70 transition-colors"

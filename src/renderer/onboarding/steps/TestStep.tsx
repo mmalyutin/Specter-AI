@@ -19,14 +19,15 @@ export default function TestStep({ onNext, onBack }: Props) {
       setOutput((prev) => prev + chunk)
     })
     const unsubDone = api.onStreamDone(() => {
-      setStatus('done')
+      setStatus((prev) => (prev === 'running' ? 'done' : prev))
     })
     const unsubError = api.onStreamError((err) => {
       setError(err)
-      setStatus('error')
+      setStatus((prev) => (prev === 'running' ? 'error' : prev))
     })
 
     return () => {
+      window.specterAPI?.cancelAI()
       unsubChunk()
       unsubDone()
       unsubError()
@@ -34,6 +35,7 @@ export default function TestStep({ onNext, onBack }: Props) {
   }, [])
 
   function runTest() {
+    window.specterAPI?.cancelAI()
     setStatus('running')
     setOutput('')
     setError(null)
@@ -85,25 +87,26 @@ export default function TestStep({ onNext, onBack }: Props) {
           <ArrowLeft className="w-3.5 h-3.5" /> Back
         </button>
         {status !== 'done' ? (
-          <button
-            onClick={runTest}
-            disabled={status === 'running'}
-            className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl
-                       bg-violet-600 hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed
-                       text-sm font-medium transition-colors"
-          >
-            {status === 'running' ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" /> Testing...
-              </>
-            ) : status === 'error' ? (
-              'Retry test'
-            ) : (
-              <>
-                <Play className="w-4 h-4" /> Run test
-              </>
-            )}
-          </button>
+          status === 'running' ? (
+            <button
+              onClick={() => {
+                window.specterAPI?.cancelAI()
+                setStatus('idle')
+              }}
+              className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl
+                         border border-white/10 hover:bg-white/5 text-sm font-medium transition-colors"
+            >
+              <Loader2 className="w-4 h-4 animate-spin" /> Cancel test
+            </button>
+          ) : (
+            <button
+              onClick={runTest}
+              className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl
+                         bg-violet-600 hover:bg-violet-500 text-sm font-medium transition-colors"
+            >
+              {status === 'error' ? 'Retry test' : (<><Play className="w-4 h-4" /> Run test</>)}
+            </button>
+          )
         ) : (
           <button
             onClick={onNext}
