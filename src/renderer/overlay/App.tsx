@@ -765,7 +765,7 @@ export default function App() {
         borderStyle: 'solid'
       } as React.CSSProperties}
     >
-      <UpdateToast />
+      <UpdateToast recording={isRecording} />
 
       {/* Title bar — draggable */}
       <div

@@ -2,8 +2,15 @@
 import { useState, useEffect } from 'react'
 import { RefreshCw, X } from 'lucide-react'
 
-export default function UpdateToast() {
+interface Props {
+  /** True while meeting-audio recording is active — requires confirm before quitting */
+  recording?: boolean
+}
+
+export default function UpdateToast({ recording = false }: Props) {
   const [version, setVersion] = useState<string | null>(null)
+  const [confirming, setConfirming] = useState(false)
+  const [restarting, setRestarting] = useState(false)
 
   useEffect(() => {
     const api = window.specterAPI
@@ -15,16 +22,32 @@ export default function UpdateToast() {
 
   if (!version) return null
 
+  function handleRestart() {
+    if (recording && !confirming && !restarting) {
+      setConfirming(true)
+      return
+    }
+    if (restarting) return
+    setRestarting(true)
+    window.specterAPI?.installUpdate()
+  }
+
   return (
-    <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-violet-500/15 border border-violet-500/30 text-xs">
+    <div role="status" className="flex items-center gap-2 px-3 py-2 rounded-xl bg-violet-500/15 border border-violet-500/30 text-xs">
       <span className="flex-1 text-violet-200">
         v{version} ready — restart to update
       </span>
       <button
-        onClick={() => window.specterAPI?.installUpdate()}
-        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-violet-600 hover:bg-violet-500 text-white transition-colors"
+        onClick={handleRestart}
+        disabled={restarting}
+        className={
+          confirming && !restarting
+            ? 'flex items-center gap-1 px-2 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-white transition-colors'
+            : 'flex items-center gap-1 px-2 py-1 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white transition-colors'
+        }
       >
-        <RefreshCw className="w-3 h-3" /> Restart
+        <RefreshCw className="w-3 h-3" />
+        {restarting ? 'Restarting...' : confirming ? 'Recording — quit anyway?' : 'Restart'}
       </button>
       <button
         onClick={() => setVersion(null)}
