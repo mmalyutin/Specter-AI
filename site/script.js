@@ -25,26 +25,54 @@ export function detectOS(userAgent) {
   return 'windows'
 }
 
-export function isAppleSilicon() {
-  const platform = navigator.platform || ''
-  return /arm|aarch64/i.test(platform)
+export function isMobileLike(ua) {
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(ua)
 }
 
+// Sync legacy helper. macOS caveat: navigator.platform reports "MacIntel" even on
+// Apple Silicon, so this returns x64 for macOS when high-entropy data is unavailable.
+// Runtime code should use getBestDownloadUrl for accurate Apple Silicon detection.
 export function primaryDownloadUrl(ua) {
   const os = detectOS(ua)
-  if (os === 'macos') {
-    return isAppleSilicon() ? DOWNLOAD_URLS.macos.arm64 : DOWNLOAD_URLS.macos.x64
-  }
+  if (os === 'macos') return DOWNLOAD_URLS.macos.x64
   if (os === 'linux') return DOWNLOAD_URLS.linux.appimage
   return DOWNLOAD_URLS.windows.setup
 }
 
-export function initDownloadButton() {
+export async function getBestDownloadUrl(ua) {
+  const os = detectOS(ua)
+  if (os !== 'macos') return primaryDownloadUrl(ua)
+  // macOS: ask for high-entropy architecture when available; navigator.platform
+  // reports "MacIntel" even on Apple Silicon, so it cannot be trusted alone.
+  try {
+    const uaData = navigator.userAgentData
+    if (uaData && typeof uaData.getHighEntropyValue === 'function') {
+      const { architecture } = await uaData.getHighEntropyValue(['architecture'])
+      if (architecture === 'arm') return DOWNLOAD_URLS.macos.arm64
+      if (architecture) return DOWNLOAD_URLS.macos.x64
+    }
+  } catch {
+    // fall through to platform heuristic
+  }
+  return /arm|aarch64/i.test(navigator.platform || '')
+    ? DOWNLOAD_URLS.macos.arm64
+    : DOWNLOAD_URLS.macos.x64
+}
+
+export async function initDownloadButton() {
   const btn = document.getElementById('download-primary')
   const label = document.getElementById('download-label')
   if (!btn || !label) return
   const ua = navigator.userAgent
-  btn.href = primaryDownloadUrl(ua)
+
+  // Phones/tablets can't run the Electron app; route them to the releases page.
+  if (isMobileLike(ua)) {
+    btn.href = 'https://github.com/umairinayat/Specter-AI/releases'
+    label.textContent = 'Get Specter AI on desktop'
+    return
+  }
+
+  btn.href = await getBestDownloadUrl(ua)
   const os = detectOS(ua)
   label.textContent =
     os === 'macos' ? 'Download for Mac' : os === 'linux' ? 'Download for Linux' : 'Download for Windows'

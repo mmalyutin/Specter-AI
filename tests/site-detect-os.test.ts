@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { detectOS, DOWNLOAD_URLS } from '../site/script'
+import { detectOS, DOWNLOAD_URLS, isMobileLike } from '../site/script'
 
 describe('detectOS', () => {
   it('detects Windows', () => {
@@ -31,5 +31,17 @@ describe('DOWNLOAD_URLS', () => {
     expect(DOWNLOAD_URLS.windows.setup).toBe(`${base}specter-setup.exe`)
     expect(DOWNLOAD_URLS.macos.arm64).toBe(`${base}specter-mac-arm64.zip`)
     expect(DOWNLOAD_URLS.linux.appimage).toBe(`${base}specter-linux-x64.AppImage`)
+  })
+})
+
+describe('isMobileLike', () => {
+  it('flags phones', () => {
+    expect(isMobileLike('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15')).toBe(true)
+    expect(isMobileLike('Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36')).toBe(true)
+  })
+
+  it('does not flag desktop UAs', () => {
+    expect(isMobileLike('Mozilla/5.0 (Windows NT 10.0; Win64; x64)')).toBe(false)
+    expect(isMobileLike('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)')).toBe(false)
   })
 })
