@@ -63,6 +63,14 @@ export interface SpecterAPI {
 
   // Overlay opacity — applied via CSS (not native) to avoid WS_EX_LAYERED breaking WDA_EXCLUDEFROMCAPTURE
   onOpacityChange: (callback: (opacity: number) => void) => () => void
+
+  // Onboarding
+  completeOnboarding: (skipped?: boolean) => void
+  checkCodex: () => Promise<{ installed: boolean; loggedInHint: boolean }>
+
+  // Updates
+  onUpdateStatus: (callback: (data: { version: string; ready: boolean }) => void) => () => void
+  installUpdate: () => void
 }
 
 // --- Type guard helpers for IPC callback data ---
@@ -246,6 +254,31 @@ const api: SpecterAPI = {
     }
     ipcRenderer.on(IPC_CHANNELS.OVERLAY_SET_OPACITY, handler)
     return () => ipcRenderer.removeListener(IPC_CHANNELS.OVERLAY_SET_OPACITY, handler)
+  },
+
+  // Onboarding
+  completeOnboarding: (skipped) => {
+    ipcRenderer.send(IPC_CHANNELS.ONBOARDING_COMPLETE, skipped === true)
+  },
+  checkCodex: () => {
+    return ipcRenderer.invoke(IPC_CHANNELS.ONBOARDING_CHECK_CODEX) as Promise<{ installed: boolean; loggedInHint: boolean }>
+  },
+
+  // Updates
+  onUpdateStatus: (callback) => {
+    const handler = (_: Electron.IpcRendererEvent, data: unknown) => {
+      if (typeof data === 'object' && data !== null) {
+        const d = data as Record<string, unknown>
+        if (typeof d.version === 'string' && typeof d.ready === 'boolean') {
+          callback({ version: d.version, ready: d.ready })
+        }
+      }
+    }
+    ipcRenderer.on(IPC_CHANNELS.UPDATE_STATUS, handler)
+    return () => ipcRenderer.removeListener(IPC_CHANNELS.UPDATE_STATUS, handler)
+  },
+  installUpdate: () => {
+    ipcRenderer.send(IPC_CHANNELS.APP_INSTALL_UPDATE)
   }
 }
 
