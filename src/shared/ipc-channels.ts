@@ -60,9 +60,17 @@ export const IPC_CHANNELS = {
   CONVERSATIONS_DELETE: 'conversations:delete',
   CONVERSATIONS_CLEAR: 'conversations:clear',
 
+  // Onboarding
+  ONBOARDING_COMPLETE: 'onboarding:complete',
+  ONBOARDING_CHECK_CODEX: 'onboarding:check-codex',
+
+  // Updates
+  UPDATE_STATUS: 'update:status',
+
   // App
   APP_QUIT: 'app:quit',
-  APP_VERSION: 'app:version'
+  APP_VERSION: 'app:version',
+  APP_INSTALL_UPDATE: 'app:install-update'
 } as const
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS]

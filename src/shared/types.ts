@@ -30,6 +30,8 @@ export interface UserSettings {
   // UX
   autoHideDelay: number // seconds, 0 = disabled
   smartCrop: boolean    // capture active window only (vs full screen)
+  // Onboarding
+  onboardingComplete: boolean
 }
 
 export interface OpenRouterModel {

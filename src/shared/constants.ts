@@ -118,7 +118,9 @@ export const DEFAULT_SETTINGS = {
   whisperApiUrl: '',        // only used when provider is 'custom'
   whisperModel: '',         // only used when provider is 'custom'
   autoHideDelay: 0,          // seconds, 0 = disabled
-  smartCrop: false            // capture active window only (vs full screen)
+  smartCrop: false,           // capture active window only (vs full screen)
+  // Onboarding
+  onboardingComplete: false
 }
 
 export const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1'

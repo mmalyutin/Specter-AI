@@ -77,7 +77,8 @@ const SETTINGS_KEY_VALIDATORS: Record<string, (value: unknown) => boolean> = {
   whisperApiUrl: (v) => typeof v === 'string' && v.length <= 500,
   whisperModel: (v) => typeof v === 'string' && v.length <= 200,
   autoHideDelay: (v) => typeof v === 'number' && v >= 0 && v <= 300,
-  smartCrop: (v) => typeof v === 'boolean'
+  smartCrop: (v) => typeof v === 'boolean',
+  onboardingComplete: (v) => typeof v === 'boolean'
 }
 
 /** Returns the set of allowed settings keys */
@@ -172,7 +173,8 @@ const schema = {
   whisperApiUrl: { type: 'string' as const, default: DEFAULT_SETTINGS.whisperApiUrl },
   whisperModel: { type: 'string' as const, default: DEFAULT_SETTINGS.whisperModel },
   autoHideDelay: { type: 'number' as const, default: DEFAULT_SETTINGS.autoHideDelay },
-  smartCrop: { type: 'boolean' as const, default: DEFAULT_SETTINGS.smartCrop }
+  smartCrop: { type: 'boolean' as const, default: DEFAULT_SETTINGS.smartCrop },
+  onboardingComplete: { type: 'boolean' as const, default: DEFAULT_SETTINGS.onboardingComplete }
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -276,7 +278,8 @@ export function getAllSettings(): UserSettings {
     whisperApiUrl: s.get('whisperApiUrl') as string,
     whisperModel: s.get('whisperModel') as string,
     autoHideDelay: s.get('autoHideDelay') as number,
-    smartCrop: s.get('smartCrop') as boolean
+    smartCrop: s.get('smartCrop') as boolean,
+    onboardingComplete: s.get('onboardingComplete') as boolean
   }
 }
 
