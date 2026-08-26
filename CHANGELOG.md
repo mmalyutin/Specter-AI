@@ -2,6 +2,17 @@
 
 All notable changes to Specter AI are documented in this file.
 
+## [1.4.0] - 2026-08-27
+
+### Added
+- First-run setup wizard: provider selection (OpenRouter / OpenAI / Codex plan), API key validation with auto-detection (sk-or-/sk-proj-/legacy sk-), model picker with curated choices per provider, live end-to-end test query, hotkey walkthrough. Skippable via "Skip" — re-runnable from the tray menu ("Run Setup Wizard")
+- Auto-update: silent background checks against GitHub Releases every 6 hours, with an overlay restart toast (confirms before restarting during active recording)
+- Download website (/site): OS auto-detecting download button (incl. Apple Silicon via User-Agent Client Hints), mobile routing, install walkthroughs, FAQ. Deploys via GitHub Actions (site.yml) with Pages enablement
+- Windows CI code-signing support via WINDOWS_CSC_LINK / WINDOWS_CSC_KEY_PASSWORD secrets (unsigned path unchanged when secrets absent)
+- Stable, version-less release artifact names: specter-setup.exe, specter-portable.exe, specter-mac-{arch}.zip, specter-linux-{arch}.AppImage/.deb — permanent download links
+- Codex CLI detection util and API-key provider detection util, unit tested
+- Vitest test infrastructure; tests run in CI alongside typecheck
+
 ## [1.3.0] - 2026-08-23
 
 ### Added
