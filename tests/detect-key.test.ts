@@ -27,4 +27,12 @@ describe('detectApiKeyType', () => {
     expect(detectApiKeyType('')).toBe('unknown')
     expect(detectApiKeyType('sk-short')).toBe('unknown')
   })
+
+  it('returns unknown for other providers like Anthropic', () => {
+    expect(detectApiKeyType('sk-ant-api03-abc123def456ghi789')).toBe('unknown')
+  })
+
+  it('prefers the OpenRouter prefix over the legacy pattern', () => {
+    expect(detectApiKeyType('sk-or-v1-' + 'a'.repeat(30))).toBe('openrouter')
+  })
 })

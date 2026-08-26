@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseCodexVersionOutput } from '../src/main/codex-detect'
+import { parseCodexVersionOutput, checkCommandInstalled } from '../src/main/codex-detect'
 
 describe('parseCodexVersionOutput', () => {
   it('accepts codex version strings like "codex-cli 0.1.2"', () => {
@@ -19,4 +19,16 @@ describe('parseCodexVersionOutput', () => {
     expect(parseCodexVersionOutput('')).toBe(false)
     expect(parseCodexVersionOutput('some random output')).toBe(false)
   })
+
+  it('rejects "notcodex 1.2" (word boundary)', () => {
+    expect(parseCodexVersionOutput('notcodex 1.2.3')).toBe(false)
+  })
+})
+
+describe('checkCommandInstalled', () => {
+  it('resolves with installed=false for a nonexistent command', async () => {
+    const status = await checkCommandInstalled('specter-definitely-not-a-real-cmd-xyz')
+    expect(status.installed).toBe(false)
+    expect(typeof status.loggedInHint).toBe('boolean')
+  }, 15000)
 })

@@ -13,44 +13,60 @@ export interface CodexStatus {
 
 /** True when the output of `codex --version` looks like a real version line. */
 export function parseCodexVersionOutput(output: string): boolean {
-  return /codex[a-z-]*\s+\d+\.\d+/i.test(output.trim())
+  return /\bcodex[a-z-]*\s+\d+\.\d+/i.test(output.trim())
 }
 
 export function codexAuthPath(): string {
-  return join(homedir(), '.codex', 'auth.json')
+  return join(process.env.CODEX_HOME || join(homedir(), '.codex'), 'auth.json')
 }
 
 export function checkCodexInstalled(timeoutMs = 5000): Promise<CodexStatus> {
-  const cmd = process.platform === 'win32' ? 'codex.cmd' : 'codex'
+  return checkCommandInstalled(process.platform === 'win32' ? 'codex.cmd' : 'codex', timeoutMs)
+}
+
+/** Test hook: check an arbitrary command instead of codex. */
+export function checkCommandInstalled(cmd: string, timeoutMs = 5000): Promise<CodexStatus> {
   return new Promise((resolve) => {
-    let out = ''
+    const chunks: Buffer[] = []
 
     let child: ReturnType<typeof spawn>
     try {
-      child = spawn(cmd, ['--version'], { windowsHide: true })
+      // Node 20+ throws EINVAL synchronously when spawning .cmd/.bat with args
+      // unless shell:true. Args are a constant ('--version') — no injection surface.
+      child = spawn(cmd, ['--version'], {
+        shell: process.platform === 'win32',
+        windowsHide: true
+      })
     } catch {
       resolve({ installed: false, loggedInHint: existsSync(codexAuthPath()) })
       return
     }
 
-    let settledNow = false
+    let settled = false
     const finish = (status: CodexStatus) => {
-      if (settledNow) return
-      settledNow = true
+      if (settled) return
+      settled = true
       clearTimeout(timer)
       resolve(status)
     }
 
     const timer = setTimeout(() => {
-      child.kill()
+      if (process.platform === 'win32') {
+        // Tree-kill: .cmd spawns a shell, so kill the whole process tree.
+        spawn('taskkill', ['/pid', String(child.pid ?? 0), '/T', '/F'], {
+          windowsHide: true
+        }).on('error', () => {})
+      } else {
+        child.kill('SIGKILL')
+      }
       finish({ installed: false, loggedInHint: existsSync(codexAuthPath()) })
     }, timeoutMs)
 
     child.stdout?.on('data', (d: Buffer) => {
-      out += d.toString('utf8')
+      chunks.push(d)
     })
     child.stderr?.on('data', (d: Buffer) => {
-      out += d.toString('utf8')
+      chunks.push(d)
     })
 
     child.on('error', () => {
@@ -58,6 +74,7 @@ export function checkCodexInstalled(timeoutMs = 5000): Promise<CodexStatus> {
     })
 
     child.on('close', () => {
+      const out = Buffer.concat(chunks).toString('utf8')
       finish({ installed: parseCodexVersionOutput(out), loggedInHint: existsSync(codexAuthPath()) })
     })
   })
