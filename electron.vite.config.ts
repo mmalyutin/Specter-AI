@@ -33,7 +33,8 @@ export default defineConfig({
       rollupOptions: {
         input: {
           overlay: resolve(__dirname, 'src/renderer/overlay/index.html'),
-          dashboard: resolve(__dirname, 'src/renderer/dashboard/index.html')
+          dashboard: resolve(__dirname, 'src/renderer/dashboard/index.html'),
+          onboarding: resolve(__dirname, 'src/renderer/onboarding/index.html')
         }
       }
     },
