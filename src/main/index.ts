@@ -5,6 +5,8 @@ import { createOverlayWindow, getOverlayWindow, showOverlay } from './overlay-wi
 import { createTray, destroyTray } from './tray'
 import { registerHotkeys, unregisterAllHotkeys } from './hotkey-manager'
 import { registerIpcHandlers } from './ipc-handlers'
+import { createOnboardingWindow } from './onboarding-window'
+import { getSetting } from '../services/store'
 
 // Catch unhandled errors globally — prevents crash from spawn ENOENT (e.g. missing sox)
 process.on('uncaughtException', (err) => {
@@ -74,6 +76,15 @@ app.whenReady().then(() => {
 
   // Create system tray
   createTray()
+
+  // First run: show the onboarding wizard instead of the bare overlay.
+  // The overlay is still created (tray/hotkeys depend on it) but hidden;
+  // the wizard shows it when the user finishes or skips.
+  const onboarded = getSetting<boolean>('onboardingComplete')
+  if (!onboarded) {
+    overlay.hide()
+    createOnboardingWindow()
+  }
 
   // macOS: re-create window when dock icon is clicked
   app.on('activate', () => {

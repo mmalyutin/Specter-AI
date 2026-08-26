@@ -3,6 +3,7 @@ import { Tray, Menu, nativeImage, app } from 'electron'
 import path from 'path'
 import { toggleOverlay, showOverlay, hideOverlay } from './overlay-window'
 import { createDashboardWindow } from './dashboard-window'
+import { createOnboardingWindow } from './onboarding-window'
 
 let tray: Tray | null = null
 
@@ -41,6 +42,10 @@ export function createTray(): Tray {
     {
       label: 'Settings',
       click: () => createDashboardWindow()
+    },
+    {
+      label: 'Run Setup Wizard',
+      click: () => createOnboardingWindow()
     },
     { type: 'separator' },
     {
