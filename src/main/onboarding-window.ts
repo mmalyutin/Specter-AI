@@ -3,7 +3,7 @@
 // Registers its own IPC handlers because the wizard owns its lifecycle:
 //   onboarding:complete     → mark onboarded (unless skipped), close, show overlay
 //   onboarding:check-codex  → detect local Codex CLI install/login
-import { BrowserWindow, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import path from 'path'
 import { is } from '@electron-toolkit/utils'
 import { setSetting } from '../services/store'
@@ -13,10 +13,16 @@ import { checkCodexInstalled } from './codex-detect'
 
 let onboardingWindow: BrowserWindow | null = null
 let handlersRegistered = false
+let isQuitting = false
+let codexCheckInFlight: Promise<{ installed: boolean; loggedInHint: boolean }> | null = null
 
 function registerOnboardingHandlers(): void {
   if (handlersRegistered) return
   handlersRegistered = true
+
+  app.on('before-quit', () => {
+    isQuitting = true
+  })
 
   ipcMain.on(IPC_CHANNELS.ONBOARDING_COMPLETE, (_event, skipped: unknown) => {
     if (skipped !== true) {
@@ -25,7 +31,14 @@ function registerOnboardingHandlers(): void {
     closeOnboardingWindow()
   })
 
-  ipcMain.handle(IPC_CHANNELS.ONBOARDING_CHECK_CODEX, () => checkCodexInstalled())
+  ipcMain.handle(IPC_CHANNELS.ONBOARDING_CHECK_CODEX, () => {
+    if (!codexCheckInFlight) {
+      codexCheckInFlight = checkCodexInstalled().finally(() => {
+        codexCheckInFlight = null
+      })
+    }
+    return codexCheckInFlight
+  })
 }
 
 export function createOnboardingWindow(): BrowserWindow {
@@ -61,7 +74,9 @@ export function createOnboardingWindow(): BrowserWindow {
   // stays possible from the tray for skipped users.
   onboardingWindow.on('closed', () => {
     onboardingWindow = null
-    showOverlay()
+    if (!isQuitting) {
+      showOverlay()
+    }
   })
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
