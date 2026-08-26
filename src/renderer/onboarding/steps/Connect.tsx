@@ -37,6 +37,7 @@ function KeyConnect({ provider, onProviderChange, onNext, onBack }: Props) {
   const [groqKey, setGroqKey] = useState('')
   const [groqSaved, setGroqSaved] = useState(false)
   const [groqError, setGroqError] = useState<string | null>(null)
+  const [confirmOverwrite, setConfirmOverwrite] = useState(false)
 
   const isRouter = provider === 'openrouter'
 
@@ -91,6 +92,20 @@ function KeyConnect({ provider, onProviderChange, onNext, onBack }: Props) {
     } catch (e: unknown) {
       setGroqError(e instanceof Error ? e.message : 'Failed to save key')
     }
+  }
+
+  async function handleSaveGroq() {
+    if (!groqKey.trim()) return
+    if (!confirmOverwrite) {
+      const current = await window.specterAPI?.getSetting<'groq' | 'openai' | 'custom'>('whisperProvider')
+      if (current && current !== 'groq') {
+        setConfirmOverwrite(true)
+        setGroqError(null)
+        return
+      }
+    }
+    setConfirmOverwrite(false)
+    await saveGroq()
   }
 
   return (
@@ -154,6 +169,7 @@ function KeyConnect({ provider, onProviderChange, onNext, onBack }: Props) {
           </div>
           <p className="text-[11px] text-white/35 mb-3">
             Transcribes meeting audio via Groq&apos;s free-tier Whisper. Get a free key at console.groq.com.
+            Saving switches transcription to Groq and replaces any previous transcription provider.
           </p>
           {groqSaved ? (
             <div className="flex items-center gap-2 text-xs text-green-400">
@@ -171,7 +187,7 @@ function KeyConnect({ provider, onProviderChange, onNext, onBack }: Props) {
                            focus:outline-none focus:border-violet-500/60 placeholder:text-white/20"
               />
               <button
-                onClick={saveGroq}
+                onClick={() => void handleSaveGroq()}
                 disabled={groqKey.trim().length < 10}
                 className="px-3 py-2 rounded-lg bg-white/10 hover:bg-white/15 disabled:opacity-40
                            text-xs transition-colors"
@@ -179,6 +195,12 @@ function KeyConnect({ provider, onProviderChange, onNext, onBack }: Props) {
                 Save
               </button>
             </div>
+          )}
+          {confirmOverwrite && (
+            <button onClick={() => { setConfirmOverwrite(false); void saveGroq() }}
+              className="mt-2 w-full px-3 py-2 rounded-lg bg-red-600/80 hover:bg-red-500 text-[11px] transition-colors">
+              Replace existing transcription setup with Groq?
+            </button>
           )}
           {!groqSaved && groqError && <p className="text-xs text-red-400 mt-2">{groqError}</p>}
         </div>
@@ -208,6 +230,12 @@ function KeyConnect({ provider, onProviderChange, onNext, onBack }: Props) {
 
 function CodexConnect({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
   const [status, setStatus] = useState<{ installed: boolean; loggedInHint: boolean } | null>(null)
+
+  // There's no key to validate here, so persist the provider up front —
+  // otherwise aiProvider stays 'openrouter' and every query fails after setup.
+  useEffect(() => {
+    window.specterAPI?.setSetting('aiProvider', 'codex').catch(() => {})
+  }, [])
 
   useEffect(() => {
     window.specterAPI?.checkCodex().then(setStatus).catch(() => setStatus({ installed: false, loggedInHint: false }))

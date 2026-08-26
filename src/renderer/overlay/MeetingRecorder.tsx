@@ -31,12 +31,19 @@ interface MeetingRecorderProps {
   disabled?: boolean
   /** Compact variant for the quick-actions row */
   compact?: boolean
+  /** Notifies parent while a meeting recording/transcription session is active */
+  onRecordingChange?: (active: boolean) => void
 }
 
-export default function MeetingRecorder({ onTranscriptReady, disabled, compact }: MeetingRecorderProps) {
+export default function MeetingRecorder({ onTranscriptReady, disabled, compact, onRecordingChange }: MeetingRecorderProps) {
   const [state, setState] = useState<RecorderState>('idle')
   const [elapsed, setElapsed] = useState(0) // seconds
   const [error, setError] = useState<string | null>(null)
+
+  // Report session activity upward so parents can guard destructive actions
+  useEffect(() => {
+    onRecordingChange?.(state === 'recording' || state === 'transcribing')
+  }, [state])
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const mediaStreamRef = useRef<MediaStream | null>(null)
@@ -107,6 +114,7 @@ export default function MeetingRecorder({ onTranscriptReady, disabled, compact }
       recorder.onerror = () => {
         setError('Recording error. Please try again.')
         cleanup()
+        setState('idle')
       }
 
       recorder.start()

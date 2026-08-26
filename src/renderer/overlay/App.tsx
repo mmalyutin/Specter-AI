@@ -49,6 +49,7 @@ export default function App() {
   const [showHistory, setShowHistory] = useState(false)
   const [historyList, setHistoryList] = useState<Conversation[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
+  const [meetingActive, setMeetingActive] = useState(false) // MeetingRecorder session in progress
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -765,7 +766,7 @@ export default function App() {
         borderStyle: 'solid'
       } as React.CSSProperties}
     >
-      <UpdateToast recording={isRecording} />
+      <UpdateToast recording={isRecording || meetingActive} />
 
       {/* Title bar — draggable */}
       <div
@@ -955,6 +956,7 @@ export default function App() {
             <MeetingRecorder
               onTranscriptReady={submitMeetingTranscript}
               disabled={isStreaming}
+              onRecordingChange={setMeetingActive}
             />
 
             <p className="text-white/30 text-xs leading-relaxed">
@@ -1072,6 +1074,7 @@ export default function App() {
               onTranscriptReady={submitMeetingTranscript}
               disabled={isStreaming}
               compact
+              onRecordingChange={setMeetingActive}
             />
           </div>
         )}
