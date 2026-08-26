@@ -68,6 +68,7 @@ jobs:
           name: specter-ai-windows
           path: |
             dist/*.exe
+            dist/*.yml
           retention-days: 30
 
   # ─── Build: macOS ──────────────────────────────────────
@@ -101,6 +102,7 @@ jobs:
           name: specter-ai-macos
           path: |
             dist/*.zip
+            dist/*.yml
           retention-days: 30
 
   # ─── Build: Linux ──────────────────────────────────────
@@ -134,6 +136,7 @@ jobs:
           path: |
             dist/*.AppImage
             dist/*.deb
+            dist/*.yml
           retention-days: 30
 
   # ─── Release (on tag push only) ────────────────────────

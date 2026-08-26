@@ -59,9 +59,15 @@ export default function PickModel({ provider, onNext, onBack }: Props) {
   return (
     <div className="max-w-lg mx-auto px-8 py-8">
       <h2 className="text-lg font-semibold mb-1">Pick a model</h2>
-      <p className="text-xs text-white/40 mb-6">
+      <p className="text-xs text-white/40 mb-4">
         You can browse all models later in Settings → Models.
       </p>
+      <button
+        onClick={() => window.specterAPI?.openDashboard()}
+        className="text-xs text-violet-300 hover:text-violet-200 mb-6"
+      >
+        Open model browser now
+      </button>
 
       <div className="space-y-3">
         {choices.map((c) => {

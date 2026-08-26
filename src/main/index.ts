@@ -84,8 +84,15 @@ app.whenReady().then(() => {
   // First run: show the onboarding wizard instead of the bare overlay.
   // The overlay is still created (tray/hotkeys depend on it) but hidden;
   // the wizard shows it when the user finishes or skips.
+  // Escape hatch for upgraders from 1.3.x: if an API key or provider is
+  // already configured, skip the wizard so configured users aren't forced
+  // through setup again after upgrading to 1.4.0.
   const onboarded = getSetting<boolean>('onboardingComplete')
-  if (!onboarded) {
+  const hasProviderConfig =
+    !!getSetting<string>('openrouterApiKey') ||
+    !!getSetting<string>('openaiApiKey') ||
+    getSetting<'openrouter' | 'openai' | 'codex'>('aiProvider') === 'codex'
+  if (!onboarded && !hasProviderConfig) {
     overlay.hide()
     createOnboardingWindow()
   }
