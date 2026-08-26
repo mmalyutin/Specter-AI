@@ -44,10 +44,25 @@ jobs:
           restore-keys: electron-win-
       - run: npm ci
       - run: npm run build
-      - name: Build Windows portable
-        run: npx electron-builder --win --publish never
+      - name: Decode signing certificate
+        id: cert
+        shell: pwsh
+        run: |
+          if ("${{ secrets.WINDOWS_CSC_LINK }}" -ne "") {
+            [IO.File]::WriteAllBytes("cert.pfx", [Convert]::FromBase64String("${{ secrets.WINDOWS_CSC_LINK }}"))
+            "available=true" >> $env:GITHUB_OUTPUT
+            Write-Host "Signing certificate decoded"
+          } else {
+            "available=false" >> $env:GITHUB_OUTPUT
+            Write-Host "No signing certificate configured — building unsigned"
+          }
+
+      - name: Build Windows installer
+        run: npx electron-builder --win --publish never ${{ steps.cert.outputs.available == 'true' && '--config.win.signAndEditExecutable=true' || '' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_LINK: ${{ steps.cert.outputs.available == 'true' && 'cert.pfx' || '' }}
+          CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CSC_KEY_PASSWORD }}
       - uses: actions/upload-artifact@v4
         with:
           name: specter-ai-windows
