@@ -6,6 +6,7 @@ import { createTray, destroyTray } from './tray'
 import { registerHotkeys, unregisterAllHotkeys } from './hotkey-manager'
 import { registerIpcHandlers } from './ipc-handlers'
 import { createOnboardingWindow } from './onboarding-window'
+import { initUpdater } from './updater'
 import { getSetting } from '../services/store'
 
 // Catch unhandled errors globally — prevents crash from spawn ENOENT (e.g. missing sox)
@@ -76,6 +77,9 @@ app.whenReady().then(() => {
 
   // Create system tray
   createTray()
+
+  // Auto-update checks (no-op in dev)
+  initUpdater()
 
   // First run: show the onboarding wizard instead of the bare overlay.
   // The overlay is still created (tray/hotkeys depend on it) but hidden;
