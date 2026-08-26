@@ -1,6 +1,6 @@
 {
   "name": "specter-ai",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "description": "Open-source AI screen & meeting copilot — invisible overlay powered by OpenRouter",
   "main": "./out/main/index.js",
   "homepage": "https://github.com/umairinayat/Specter-AI",
@@ -44,8 +44,20 @@
       "!out/**/*.map",
       "assets/**/*"
     ],
+    "asarUnpack": [
+      "**/node_modules/koffi/**",
+      "**/node_modules/screenshot-desktop/**",
+      "**/node_modules/tesseract.js/**",
+      "**/node_modules/tesseract.js-core/**"
+    ],
     "win": {
       "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
         {
           "target": "portable",
           "arch": [
@@ -54,8 +66,10 @@
         }
       ],
       "icon": "build-resources/icon.ico",
-      "artifactName": "${productName}-${version}-win-${arch}.${ext}",
       "signAndEditExecutable": false
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-portable.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -65,7 +79,8 @@
       "installerHeaderIcon": "build-resources/icon.ico",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Specter AI"
+      "shortcutName": "Specter AI",
+      "artifactName": "${productName}-Setup-${version}.${ext}"
     },
     "mac": {
       "target": [

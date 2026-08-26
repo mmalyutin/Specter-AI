@@ -221,8 +221,9 @@ Browse all 500+ models at [openrouter.ai/models](https://openrouter.ai/models).
 - Works on both Intel and Apple Silicon
 
 ### Windows
-- Overlay uses `setContentProtection(true)` to hide from screen capture
-- Note: this hides the overlay from **all** screen capture including your own screenshots
+- Overlay is excluded from screen share via `SetWindowDisplayAffinity(WDA_EXCLUDEFROMCAPTURE)`
+- Specter hides the overlay briefly when capturing so your own screenshots still include the rest of the screen
+- Packaged builds capture with Electron `desktopCapturer` (with `screenshot-desktop` as fallback)
 - No special permissions required
 
 ### Linux
@@ -293,7 +294,7 @@ We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 ## Known Limitations
 
 - **Whisper transcription** supports Groq (fastest, recommended), OpenAI, and custom endpoints. Configure the provider and API key in Settings.
-- **Windows screen protection** hides the overlay from all capture, including the user's own screenshots.
+- **Vision screenshots** require a vision-capable model (Gemini, Claude, Llama 4, GPT-4o, etc.). Text-only models still receive OCR text when it is available.
 - **Linux screen share exclusion** is unreliable on Wayland compositors.
 
 ---

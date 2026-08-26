@@ -1,9 +1,11 @@
-// Screen capture + OCR pipeline — uses worker thread for OCR to avoid blocking main
+// Screen capture + OCR pipeline
+// Primary capture uses Electron's desktopCapturer (works in packaged .exe).
+// screenshot-desktop is a fallback — it depends on unpacked Windows binaries
+// and often fails inside an asar archive.
 import { Worker } from 'worker_threads'
 import { join } from 'path'
 import { execSync } from 'child_process'
-import screenshot from 'screenshot-desktop'
-import { screen } from 'electron'
+import { desktopCapturer, nativeImage, screen } from 'electron'
 import type { ScreenCaptureResult } from '../shared/types'
 import { getOverlayWindow, showOverlay } from './overlay-window'
 
@@ -23,10 +25,6 @@ interface WindowBounds {
   title: string
 }
 
-/**
- * Run OCR in a worker thread so the main process stays responsive.
- * The worker file is built as a separate entry by electron-vite.
- */
 function ocrInWorker(imageBuffer: Buffer, language = 'eng'): Promise<string> {
   return new Promise((resolve, reject) => {
     const workerPath = join(__dirname, 'ocr-worker.js')
@@ -51,11 +49,10 @@ function ocrInWorker(imageBuffer: Buffer, language = 'eng'): Promise<string> {
       worker.terminate()
     })
 
-    // Timeout after 30 seconds — OCR shouldn't take longer
     const timeout = setTimeout(() => {
       worker.terminate()
-      reject(new Error('OCR timed out after 30 seconds'))
-    }, 30_000)
+      reject(new Error('OCR timed out after 12 seconds'))
+    }, 12_000)
 
     worker.on('exit', () => {
       clearTimeout(timeout)
@@ -63,10 +60,6 @@ function ocrInWorker(imageBuffer: Buffer, language = 'eng'): Promise<string> {
   })
 }
 
-/**
- * Temporarily hide the overlay window so it doesn't appear in the screenshot.
- * Returns true if the overlay was visible and was hidden.
- */
 function hideOverlayForCapture(): boolean {
   const overlay = getOverlayWindow()
   if (overlay && !overlay.isDestroyed() && overlay.isVisible()) {
@@ -76,29 +69,77 @@ function hideOverlayForCapture(): boolean {
   return false
 }
 
-/**
- * Restore the overlay window after capture.
- */
 function restoreOverlay(): void {
   showOverlay()
 }
 
-/**
- * Small delay to let the OS repaint after hiding the overlay.
- * Without this, the screenshot may still capture the overlay in-flight.
- */
 function waitForRepaint(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 150))
+  return new Promise((resolve) => setTimeout(resolve, 180))
 }
 
-/**
- * Get the bounds of the currently active/focused window using native OS commands.
- * Returns null if detection fails (graceful fallback to full-screen capture).
- */
+async function captureViaDesktopCapturer(): Promise<Buffer> {
+  const primary = screen.getPrimaryDisplay()
+  const width = Math.max(1, Math.round(primary.size.width * primary.scaleFactor))
+  const height = Math.max(1, Math.round(primary.size.height * primary.scaleFactor))
+
+  const sources = await desktopCapturer.getSources({
+    types: ['screen'],
+    thumbnailSize: { width, height },
+    fetchWindowIcons: false
+  })
+
+  if (!sources.length) {
+    throw new Error('No screen sources found')
+  }
+
+  const match =
+    sources.find((source) => source.display_id === String(primary.id)) ||
+    sources.find((source) => source.id.startsWith('screen:')) ||
+    sources[0]
+
+  if (!match.thumbnail || match.thumbnail.isEmpty()) {
+    throw new Error('Screen thumbnail was empty')
+  }
+
+  const png = match.thumbnail.toPNG()
+  if (!png || png.length < 100) {
+    throw new Error('Screen PNG was empty')
+  }
+
+  return png
+}
+
+async function captureViaScreenshotDesktop(): Promise<Buffer> {
+  // Lazy-require so a missing/broken binary does not crash app startup
+  const screenshot = require('screenshot-desktop') as (options?: { format?: 'png' | 'jpg' }) => Promise<Buffer>
+  const imgBuffer = await screenshot({ format: 'png' })
+  if (!imgBuffer || imgBuffer.length < 100) {
+    throw new Error('screenshot-desktop returned an empty image')
+  }
+  return imgBuffer
+}
+
+async function grabScreenPng(): Promise<Buffer> {
+  const errors: string[] = []
+
+  try {
+    return await captureViaDesktopCapturer()
+  } catch (err) {
+    errors.push(`desktopCapturer: ${err instanceof Error ? err.message : String(err)}`)
+  }
+
+  try {
+    return await captureViaScreenshotDesktop()
+  } catch (err) {
+    errors.push(`screenshot-desktop: ${err instanceof Error ? err.message : String(err)}`)
+  }
+
+  throw new Error(`Screen capture failed. ${errors.join(' | ')}`)
+}
+
 function getActiveWindowBounds(): WindowBounds | null {
   try {
     if (process.platform === 'win32') {
-      // PowerShell: get foreground window bounds via Win32 API
       const script = `
         Add-Type @"
         using System;
@@ -138,7 +179,6 @@ function getActiveWindowBounds(): WindowBounds | null {
         }
       }
     } else if (process.platform === 'darwin') {
-      // AppleScript: get bounds of the frontmost application's front window
       const script = `
         tell application "System Events"
           set frontApp to first application process whose frontmost is true
@@ -169,7 +209,6 @@ function getActiveWindowBounds(): WindowBounds | null {
         }
       }
     } else if (process.platform === 'linux') {
-      // xdotool + xwininfo for X11
       const windowId = execSync('xdotool getactivewindow', {
         timeout: 2000,
         encoding: 'utf-8'
@@ -208,35 +247,24 @@ function getActiveWindowBounds(): WindowBounds | null {
   return null
 }
 
-/**
- * Crop an image buffer to the specified bounds.
- * Uses a simple PNG pixel-copy approach via sharp if available, otherwise returns the full image.
- * Since sharp is a devDependency used for icon generation, we fall back gracefully.
- */
-async function cropImageBuffer(
+function cropImageBuffer(
   imgBuffer: Buffer,
   bounds: WindowBounds,
-  _displayBounds: { x: number; y: number; width: number; height: number }
-): Promise<Buffer> {
+  displayBounds: { x: number; y: number; width: number; height: number }
+): Buffer {
   try {
-    // sharp is available as a devDep — try it for cropping
-    const sharp = require('sharp')
+    const img = nativeImage.createFromBuffer(imgBuffer)
+    if (img.isEmpty()) return imgBuffer
 
-    const metadata = await sharp(imgBuffer).metadata()
-    const imgWidth = metadata.width || 1
-    const imgHeight = metadata.height || 1
+    const { width: imgWidth, height: imgHeight } = img.getSize()
+    const scaleX = imgWidth / Math.max(1, displayBounds.width)
+    const scaleY = imgHeight / Math.max(1, displayBounds.height)
 
-    // Calculate scale factor (screenshot may be at display DPI scale)
-    const scaleX = imgWidth / _displayBounds.width
-    const scaleY = imgHeight / _displayBounds.height
-
-    // Convert window bounds to image pixel coords, accounting for display offset
-    let cropX = Math.round((bounds.x - _displayBounds.x) * scaleX)
-    let cropY = Math.round((bounds.y - _displayBounds.y) * scaleY)
+    let cropX = Math.round((bounds.x - displayBounds.x) * scaleX)
+    let cropY = Math.round((bounds.y - displayBounds.y) * scaleY)
     let cropW = Math.round(bounds.width * scaleX)
     let cropH = Math.round(bounds.height * scaleY)
 
-    // Clamp to image bounds
     cropX = Math.max(0, cropX)
     cropY = Math.max(0, cropY)
     cropW = Math.min(cropW, imgWidth - cropX)
@@ -247,25 +275,31 @@ async function cropImageBuffer(
       return imgBuffer
     }
 
-    return await sharp(imgBuffer)
-      .extract({ left: cropX, top: cropY, width: cropW, height: cropH })
-      .png()
-      .toBuffer()
-  } catch {
-    // sharp not available or crop failed — return full image
-    console.warn('[Specter] Image cropping unavailable, using full screenshot')
+    return img.crop({ x: cropX, y: cropY, width: cropW, height: cropH }).toPNG()
+  } catch (err) {
+    console.warn('[Specter] Image cropping failed, using full screenshot:', err)
     return imgBuffer
   }
 }
 
-/**
- * Capture the full screen and run OCR.
- * OCR runs in a separate worker thread so the main process (IPC, hotkeys, UI)
- * is not blocked during recognition.
- * The overlay is hidden before capture to avoid the AI reading its own UI.
- *
- * @param activeWindowOnly - If true, attempt to crop to the active window's bounds
- */
+function toJpegBase64(pngBuffer: Buffer, maxWidth = 1600, quality = 82): string {
+  let img = nativeImage.createFromBuffer(pngBuffer)
+  if (img.isEmpty()) {
+    return pngBuffer.toString('base64')
+  }
+
+  const { width } = img.getSize()
+  if (width > maxWidth) {
+    img = img.resize({ width: maxWidth, quality: 'best' })
+  }
+
+  const jpeg = img.toJPEG(quality)
+  if (!jpeg || jpeg.length < 50) {
+    return pngBuffer.toString('base64')
+  }
+  return jpeg.toString('base64')
+}
+
 export async function captureScreenText(activeWindowOnly = false): Promise<ScreenCaptureResult> {
   if (isCapturing) {
     throw new Error('Screen capture already in progress')
@@ -273,11 +307,9 @@ export async function captureScreenText(activeWindowOnly = false): Promise<Scree
 
   isCapturing = true
 
-  // Detect active window BEFORE hiding overlay (so the user's actual window is still focused)
   let activeWindowBounds: WindowBounds | null = null
   if (activeWindowOnly) {
     activeWindowBounds = getActiveWindowBounds()
-    // Don't crop to our own overlay
     if (activeWindowBounds?.title?.includes('Specter')) {
       activeWindowBounds = null
     }
@@ -287,21 +319,23 @@ export async function captureScreenText(activeWindowOnly = false): Promise<Scree
   try {
     if (wasVisible) await waitForRepaint()
 
-    let imgBuffer = await screenshot({ format: 'png' })
+    let imgBuffer = await grabScreenPng()
 
-    // Crop to active window if bounds were detected
     if (activeWindowBounds) {
       const primaryDisplay = screen.getPrimaryDisplay()
-      imgBuffer = await cropImageBuffer(imgBuffer, activeWindowBounds, primaryDisplay.bounds)
+      imgBuffer = cropImageBuffer(imgBuffer, activeWindowBounds, primaryDisplay.bounds)
     }
 
-    const base64 = imgBuffer.toString('base64')
+    const base64 = toJpegBase64(imgBuffer)
 
-    // Restore overlay immediately after screenshot (before slow OCR)
     if (wasVisible) restoreOverlay()
 
-    // Run OCR in worker thread — non-blocking
-    const text = await ocrInWorker(imgBuffer)
+    let text = ''
+    try {
+      text = await ocrInWorker(imgBuffer)
+    } catch (err) {
+      console.warn('[Specter] OCR failed (screenshot will still be sent):', err)
+    }
 
     return {
       text,
@@ -309,7 +343,6 @@ export async function captureScreenText(activeWindowOnly = false): Promise<Scree
       timestamp: Date.now()
     }
   } catch (err: unknown) {
-    // Always restore overlay even if capture fails
     if (wasVisible) restoreOverlay()
     const message = err instanceof Error ? err.message : 'Screen capture failed'
     throw new Error(message)
@@ -318,22 +351,17 @@ export async function captureScreenText(activeWindowOnly = false): Promise<Scree
   }
 }
 
-/**
- * Capture screen without OCR — returns just the screenshot as base64.
- * Useful for preview mode where the user sees the screenshot before deciding to send.
- * The overlay is hidden during capture.
- */
 export async function captureScreenOnly(): Promise<{ screenshot: string; timestamp: number }> {
   const wasVisible = hideOverlayForCapture()
   try {
     if (wasVisible) await waitForRepaint()
 
-    const imgBuffer = await screenshot({ format: 'png' })
+    const imgBuffer = await grabScreenPng()
 
     if (wasVisible) restoreOverlay()
 
     return {
-      screenshot: imgBuffer.toString('base64'),
+      screenshot: toJpegBase64(imgBuffer),
       timestamp: Date.now()
     }
   } catch (err: unknown) {

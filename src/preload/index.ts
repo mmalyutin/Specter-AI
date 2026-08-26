@@ -20,6 +20,7 @@ export interface SpecterAPI {
   // Screen
   captureScreen: () => Promise<{ text: string; screenshot?: string; timestamp: number }>
   captureScreenPreview: () => Promise<{ screenshot: string; timestamp: number }>
+  onScreenCaptureError: (callback: (error: string) => void) => () => void
 
   // Audio — recording is handled in renderer via MediaRecorder
   checkAudioConfig: () => Promise<{ configured: boolean; provider: string; error?: string }>
@@ -123,6 +124,13 @@ const api: SpecterAPI = {
   // Screen
   captureScreen: () => ipcRenderer.invoke(IPC_CHANNELS.SCREEN_CAPTURE),
   captureScreenPreview: () => ipcRenderer.invoke(IPC_CHANNELS.SCREEN_CAPTURE_PREVIEW),
+  onScreenCaptureError: (callback) => {
+    const handler = (_: Electron.IpcRendererEvent, error: unknown) => {
+      callback(isString(error) ? error : 'Screen capture failed')
+    }
+    ipcRenderer.on(IPC_CHANNELS.SCREEN_CAPTURE_ERROR, handler)
+    return () => ipcRenderer.removeListener(IPC_CHANNELS.SCREEN_CAPTURE_ERROR, handler)
+  },
 
   // Audio — recording happens in renderer, transcription in main
   checkAudioConfig: () => {
